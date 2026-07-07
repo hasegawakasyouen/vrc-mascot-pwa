@@ -22,7 +22,7 @@
       border: none;
       padding: 12px 20px;
       position: absolute;
-      bottom: 24px;
+      bottom: max(24px, env(safe-area-inset-bottom, 0px) + 12px);
       left: 50%;
       transform: translateX(-50%);
       font-size: 16px;
@@ -52,21 +52,22 @@
       if (reacting) return;
       reacting = true;
 
-      mascot.classList.add('tapped');
-
       let baseFov = null;
-      if (mascot.loaded) {
-        baseFov = mascot.getFieldOfView();
-        mascot.fieldOfView = `${baseFov * 0.92}deg`;
-      }
-
-      setTimeout(() => {
-        mascot.classList.remove('tapped');
-        if (baseFov !== null) {
-          mascot.fieldOfView = `${baseFov}deg`;
+      try {
+        mascot.classList.add('tapped');
+        if (mascot.loaded) {
+          baseFov = mascot.getFieldOfView();
+          mascot.fieldOfView = `${baseFov * 0.92}deg`;
         }
-        reacting = false;
-      }, 300);
+      } finally {
+        setTimeout(() => {
+          mascot.classList.remove('tapped');
+          if (baseFov !== null) {
+            mascot.fieldOfView = `${baseFov}deg`;
+          }
+          reacting = false;
+        }, 300);
+      }
     });
   </script>
 </body>
