@@ -74,9 +74,12 @@ mascot.fieldOfView = "25deg";
 mascot.currentTime = 0;
 
 // 少し待ってレンダリング完了後、キャプチャ取得
+// 注意: model-viewer の実際のWebGL canvasはシャドウDOM内にあるため、
+// document.getElementById('mascot').querySelector('canvas') では取得できない
+// (querySelectorはシャドウDOM境界を貫通しないため null が返り、エラーになる)。
+// model-viewer 要素自身が公開している toDataURL() を直接呼び出すこと。
 setTimeout(() => {
-  const canvas = document.getElementById('mascot').querySelector('canvas');
-  const dataUrl = canvas.toDataURL('image/png');
+  const dataUrl = mascot.toDataURL('image/png');
   console.log(dataUrl);
 }, 500);
 ```
@@ -111,13 +114,14 @@ if canvas_img.mode == 'RGBA':
 else:
     background.paste(canvas_img, (0, 0))
 
-# 頭部中心でクロップ（正方形、全体の上半分を中心に）
-width, height = background.size
-left = (width - height // 2) // 2
-top = 0
-right = left + height // 2
-bottom = height // 2
-cropped = background.crop((left, top, right, bottom))
+# まず canvas_img を一度保存して実際に開き、キャラクターの頭〜上半身が
+# 収まる正方形の切り抜き範囲を目視で決めること。カメラ角度やポーズによって
+# 最適な座標は変わるため、汎用的な計算式では決め打ちできない。
+canvas_img.save('icon_screenshot_raw.png')  # 一度保存して確認する
+
+# 上記の画像を確認してから、実際の座標に置き換える
+CROP_BOX = (0, 0, 100, 100)  # (left, top, right, bottom) ← 実際の値に置き換える
+cropped = background.crop(CROP_BOX)
 
 # 512x512、192x192 にリサイズ
 icon_512 = cropped.resize((512, 512), Image.LANCZOS)
@@ -175,14 +179,14 @@ iPhoneのSafariで上記URLを開き、以下を確認：
 
 Step 2-3の画像キャプチャは以下の細部に注意してください：
 
-1. **ブラウザコンソールからの`toDataURL`取得**  
-   `model-viewer`のWebGL canvas は透明背景でレンダリングされるため、`canvas.toDataURL('image/png')` の結果は **背景なしの透明PNGです**。これをそのままアイコンにすると、背景が見えず見栄えが悪くなります。
+1. **`model-viewer`要素自身の`toDataURL`取得**  
+   `model-viewer`の実際のWebGL canvasはシャドウDOM内にあるため、`document.getElementById('mascot').querySelector('canvas')` では取得できません（`querySelector`はシャドウDOM境界を貫通しないため `null` が返ります）。`model-viewer`要素が公開している `toDataURL()` を直接呼び出してください。また、この画像は透明背景でレンダリングされるため、結果は **背景なしの透明PNGです**。これをそのままアイコンにすると、背景が見えず見栄えが悪くなります。
 
 2. **Pillow で不透明背景への合成**  
    必ず `Image.alpha_composite()` を使って、取得した透明PNG上に不透明な背景（`#eeeeee`）を下敷きにしてください。Pillow の `paste(img, pos, img)` で透明度マスク合成します（上記スクリプト参照）。
 
 3. **クロップ・リサイズの順序**  
-   一度合成してから **正方形にクロップ**（頭部が中心に来るように）→ **512x512 と 192x192 にリサイズ**（`Image.LANCZOS` 推奨）してください。逆順や複数のリサイズは品質が落ちます。
+   一度合成してから **正方形にクロップ** → **512x512 と 192x192 にリサイズ**（`Image.LANCZOS` 推奨）という順序自体は検証済みです（逆順や複数回のリサイズは品質が落ちます）。ただし、**クロップ座標（left, top, right, bottom）に汎用的な正解はありません**。カメラ角度やポーズによって画角内のキャラクターの位置は変わるため、必ず一度 `canvas_img` を画像ファイルとして保存し、実際に開いて目視確認した上で、そのスクリーンショットに合わせた座標を都度決めてください。
 
 ### AR ボタンのタップ反応二重トリガー対策
 
