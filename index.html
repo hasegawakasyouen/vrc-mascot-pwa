@@ -45,7 +45,17 @@
 
   <script>
     const mascot = document.getElementById('mascot');
+    const arButton = document.getElementById('ar-button');
     let reacting = false;
+
+    // model-viewerはシャドウDOM境界をまたぐと click イベントの target を
+    // ホスト要素(model-viewer自身)にリターゲットすることがあり、その場合
+    // event.target.closest('#ar-button') では検出できない。
+    // ARボタン自身にも直接リスナーを付け、バブリングをこの時点で止めることで、
+    // マスコット側のタップリアクションが誤発火しないようにする。
+    arButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
 
     mascot.addEventListener('click', (event) => {
       if (event.target.closest('#ar-button')) return;
