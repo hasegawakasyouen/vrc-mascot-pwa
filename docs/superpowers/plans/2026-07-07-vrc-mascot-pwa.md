@@ -375,7 +375,9 @@ Expected: いずれも200
 
 - [ ] **Step 3: ホーム画面のアイコンをタップして起動確認**
 
-Safari UIなしで全画面起動することを確認
+Safari UIなしで全画面起動することを確認。また以下もあわせて確認する:
+- 正しく `index.html` が開くこと（`manifest.json` の `start_url` がGitHub Pagesのサブパスで正しく解決されるかの実地確認）
+- ノッチ・ステータスバー部分にアバターや操作要素が隠れて見づらくなっていないか（`apple-mobile-web-app-status-bar-style: black-translucent` の見え方確認）
 
 - [ ] **Step 4: タップリアクションを確認**
 
