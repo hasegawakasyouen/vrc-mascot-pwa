@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>VRCマスコット</title>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background-color: #eee; }
+    model-viewer {
+      width: 100vw;
+      height: 100vh;
+      background-color: #eee;
+      transition: transform 0.15s ease;
+    }
+    model-viewer.tapped {
+      transform: scale(1.05);
+    }
+    #ar-button {
+      background-color: #fff;
+      border-radius: 8px;
+      border: none;
+      padding: 12px 20px;
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <model-viewer
+    id="mascot"
+    src="model.glb"
+    ios-src="model.usdz"
+    alt="改変アバター"
+    ar
+    ar-modes="quick-look"
+    camera-controls
+    autoplay
+    shadow-intensity="1">
+    <button id="ar-button" slot="ar-button">ARで見る</button>
+  </model-viewer>
+
+  <script>
+    const mascot = document.getElementById('mascot');
+    let reacting = false;
+
+    mascot.addEventListener('click', (event) => {
+      if (event.target.closest('#ar-button')) return;
+      if (reacting) return;
+      reacting = true;
+
+      mascot.classList.add('tapped');
+
+      let baseFov = null;
+      if (mascot.loaded) {
+        baseFov = mascot.getFieldOfView();
+        mascot.fieldOfView = `${baseFov * 0.92}deg`;
+      }
+
+      setTimeout(() => {
+        mascot.classList.remove('tapped');
+        if (baseFov !== null) {
+          mascot.fieldOfView = `${baseFov}deg`;
+        }
+        reacting = false;
+      }, 300);
+    });
+  </script>
+</body>
+</html>
