@@ -152,7 +152,22 @@ git push
 
 デプロイ後、`https://hasegawakasyouen.github.io/vrc-mascot-pwa/` で公開されます（ファイルとしてPushすればGitHub Pagesが自動的にServeします）。
 
-### Step 5: iPhone で「ホーム画面に追加」
+### Step 5: キャッシュバージョンを更新する（Service Worker）
+
+このプロジェクトは Service Worker（`sw.js`）でアセットをキャッシュしており、起動が高速になる代わりに、アバターを差し替えても古いキャッシュが表示され続けることがあります。差し替え後は必ず以下を行ってください:
+
+1. `sw.js` 冒頭の `CACHE_VERSION` を上げる（例: `'mascot-cache-v1'` → `'mascot-cache-v2'`）
+2. コミット・push する
+
+```bash
+git add sw.js
+git commit -m "chore: bump cache version after avatar update"
+git push
+```
+
+ブラウザは `sw.js` のバイト列が変わったことを検知して新しいService Workerをインストールし、次回起動時（最短で2回目の起動）に新しいキャッシュへ切り替わります。即座に反映したい場合は、iPhoneのSafariでページを2回続けて開き直してください。
+
+### Step 6: iPhone で「ホーム画面に追加」
 
 iPhoneのSafariで上記URLを開き、以下を確認：
 
@@ -170,6 +185,7 @@ iPhoneのSafariで上記URLを開き、以下を確認：
 - **真のシステム壁紙ではない** — Appleの制約上、サードパーティアプリによるライブ壁紙は不可能。あくまで「ホーム画面のアイコンから開くと全画面表示されるWebアプリ」です
 - **アニメーション切り替え非対応** — `model.glb` 内に複数のアニメーションクリップがある場合でも、このPWAでは最初の1つだけが再生されます。切り替えUIはありません
 - **オフラインキャッシュ未実装** — 毎回ネットワーク接続が必要です。Service Workerは実装されていません
+- **キャッシュ更新には最短でも2回の起動が必要** — Service Workerの仕組み上、アバターを差し替えた直後の1回目の起動ではまだ古いキャッシュが使われることがあります
 
 ---
 
