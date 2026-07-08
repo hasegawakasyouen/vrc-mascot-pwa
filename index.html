@@ -74,6 +74,14 @@
           baseFov = mascot.getFieldOfView();
           mascot.fieldOfView = `${baseFov * 0.92}deg`;
         }
+        const anims = mascot.availableAnimations;
+        if (anims && anims.length > 1) {
+          const current = anims.indexOf(mascot.animationName);
+          const next = (current + 1) % anims.length;
+          mascot.animationName = anims[next];
+          mascot.currentTime = 0;
+          mascot.play();
+        }
       } finally {
         setTimeout(() => {
           mascot.classList.remove('tapped');
