@@ -67,6 +67,10 @@
       if (reacting) return;
       reacting = true;
 
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+
       let baseFov = null;
       try {
         mascot.classList.add('tapped');
