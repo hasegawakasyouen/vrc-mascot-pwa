@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'mascot-cache-v4';
+const CACHE_VERSION = 'mascot-cache-v5';
 
 const CACHE_URLS = [
   './',
