@@ -46,6 +46,12 @@ const TAP_MOVE_THRESHOLD = 8; // px: これ以下の移動ならタップ扱い
 const TAP_TIME_THRESHOLD = 300; // ms: これ以下の押下時間ならタップ扱い
 const DRAG_START_THRESHOLD = 12; // px: これを超えたらドラッグ開始とみなす
 
+function screenToWorld(xPx, yPx) {
+  const worldX = (xPx / window.innerWidth) * (camera.right - camera.left) + camera.left;
+  const worldY = -(yPx / window.innerHeight) * (camera.top - camera.bottom) + camera.top;
+  return { x: worldX, y: worldY };
+}
+
 function getWorldBounds() {
   const style = getComputedStyle(document.documentElement);
   const px = (name) => parseFloat(style.getPropertyValue(name)) || 0;
@@ -229,6 +235,25 @@ canvas.addEventListener('pointerdown', (e) => {
   isDragging = false;
 });
 
+canvas.addEventListener('pointermove', (e) => {
+  if (!pointerDownPos || !modelRoot) return;
+  const dx = e.clientX - pointerDownPos.x;
+  const dy = e.clientY - pointerDownPos.y;
+  const dist = Math.hypot(dx, dy);
+
+  if (!isDragging && dist > DRAG_START_THRESHOLD) {
+    isDragging = true;
+    state = STATE.DRAGGING;
+    canvas.setPointerCapture(e.pointerId);
+  }
+
+  if (isDragging) {
+    const worldPos = screenToWorld(e.clientX, e.clientY);
+    modelRoot.position.x = worldPos.x;
+    modelRoot.position.y = worldPos.y;
+  }
+});
+
 canvas.addEventListener('pointerup', (e) => {
   if (!pointerDownPos) return;
   const dx = e.clientX - pointerDownPos.x;
@@ -236,7 +261,11 @@ canvas.addEventListener('pointerup', (e) => {
   const dist = Math.hypot(dx, dy);
   const elapsed = performance.now() - pointerDownTime;
 
-  if (!isDragging && dist <= TAP_MOVE_THRESHOLD && elapsed <= TAP_TIME_THRESHOLD) {
+  if (isDragging) {
+    isDragging = false;
+    state = STATE.IDLE;
+    stateTimer = randomIdleDuration();
+  } else if (dist <= TAP_MOVE_THRESHOLD && elapsed <= TAP_TIME_THRESHOLD) {
     handleTap();
   }
   pointerDownPos = null;
