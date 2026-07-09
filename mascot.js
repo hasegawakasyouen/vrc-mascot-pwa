@@ -38,6 +38,13 @@ let stateTimer = 0;
 const target = new THREE.Vector3();
 const MOVE_SPEED = 1.2; // ワールド単位/秒
 
+let pointerDownPos = null;
+let pointerDownTime = 0;
+let isDragging = false;
+const TAP_MOVE_THRESHOLD = 8; // px: これ以下の移動ならタップ扱い
+const TAP_TIME_THRESHOLD = 300; // ms: これ以下の押下時間ならタップ扱い
+const DRAG_START_THRESHOLD = 12; // px: これを超えたらドラッグ開始とみなす
+
 function getWorldBounds() {
   const style = getComputedStyle(document.documentElement);
   const px = (name) => parseFloat(style.getPropertyValue(name)) || 0;
@@ -184,3 +191,52 @@ function animate() {
   }
   renderer.render(scene, camera);
 }
+
+function handleTap() {
+  if (state === STATE.DRAGGING || !modelRoot || clips.length === 0) return;
+  state = STATE.REACTING;
+
+  const reactionPool = clips.map((_, i) => i).filter((i) => i !== IDLE_CLIP_INDEX);
+  const nextIndex = reactionPool.length > 0
+    ? reactionPool[Math.floor(Math.random() * reactionPool.length)]
+    : IDLE_CLIP_INDEX;
+  playClip(nextIndex, false);
+  bounce();
+
+  const clip = clips[nextIndex];
+  const durationMs = (clip ? clip.duration : 1) * 1000;
+  setTimeout(() => {
+    playClip(IDLE_CLIP_INDEX, true);
+    state = STATE.IDLE;
+    stateTimer = randomIdleDuration();
+  }, durationMs);
+}
+
+function bounce() {
+  if (!modelRoot) return;
+  if (navigator.vibrate) navigator.vibrate(50);
+  const baseScale = modelRoot.scale.x;
+  modelRoot.scale.setScalar(baseScale * 1.08);
+  setTimeout(() => {
+    if (modelRoot) modelRoot.scale.setScalar(baseScale);
+  }, 150);
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  pointerDownPos = { x: e.clientX, y: e.clientY };
+  pointerDownTime = performance.now();
+  isDragging = false;
+});
+
+canvas.addEventListener('pointerup', (e) => {
+  if (!pointerDownPos) return;
+  const dx = e.clientX - pointerDownPos.x;
+  const dy = e.clientY - pointerDownPos.y;
+  const dist = Math.hypot(dx, dy);
+  const elapsed = performance.now() - pointerDownTime;
+
+  if (!isDragging && dist <= TAP_MOVE_THRESHOLD && elapsed <= TAP_TIME_THRESHOLD) {
+    handleTap();
+  }
+  pointerDownPos = null;
+});
