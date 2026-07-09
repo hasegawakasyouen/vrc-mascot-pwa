@@ -65,15 +65,20 @@ function getWorldBounds() {
   const worldPerPxY = (camera.top - camera.bottom) / window.innerHeight;
 
   // キャラの見た目の半分程度を余白として確保し、画面端・セーフエリアに食い込まないようにする。
-  // 実機で見て狭すぎ/広すぎる場合はこの係数(0.35 / 0.5)をTask 8の確認時に調整する。
-  const halfCharWidth = TARGET_HEIGHT * 0.35;
-  const halfCharHeight = TARGET_HEIGHT * 0.5;
+  // 横方向はモデル中心(position.x)基準でおおよそ左右対称なので半値幅でよいが、
+  // Task 8の実機確認で0.35では回転時に尻尾状の装飾がはみ出すことを確認したため0.5に拡大した。
+  const halfCharWidth = TARGET_HEIGHT * 0.5;
+  // 縦方向はモデルの原点(position.y)が足元にあり、そこから上にモデル全高分伸びる構造のため、
+  // 上下対称な余白では上端がはみ出し・下端が浮きすぎる（Task 8で発覚）。
+  // 頭上には全高相当、足元にはごく僅かな余白を確保する非対称マージンに修正した。
+  const headMargin = TARGET_HEIGHT * 1.05;
+  const groundMargin = TARGET_HEIGHT * 0.05;
 
   return {
     minX: camera.left + insetLeft * worldPerPxX + halfCharWidth,
     maxX: camera.right - insetRight * worldPerPxX - halfCharWidth,
-    minY: camera.bottom + insetBottom * worldPerPxY + halfCharHeight,
-    maxY: camera.top - insetTop * worldPerPxY - halfCharHeight,
+    minY: camera.bottom + insetBottom * worldPerPxY + groundMargin,
+    maxY: camera.top - insetTop * worldPerPxY - headMargin,
   };
 }
 
