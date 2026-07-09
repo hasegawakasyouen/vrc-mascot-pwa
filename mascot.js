@@ -61,6 +61,8 @@ new GLTFLoader().load('model.glb', (gltf) => {
   // スケール後に再度バウンディングボックスを取り、足元がy=0に来るよう位置補正する
   const scaledBox = new THREE.Box3().setFromObject(modelRoot);
   modelRoot.position.y -= scaledBox.min.y;
+  modelRoot.position.x -= (scaledBox.min.x + scaledBox.max.x) / 2;
+  modelRoot.position.z -= (scaledBox.min.z + scaledBox.max.z) / 2;
 
   scene.add(modelRoot);
 
