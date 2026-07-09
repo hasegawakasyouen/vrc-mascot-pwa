@@ -31,6 +31,7 @@ let mixer = null;
 let clips = [];
 let modelRoot = null;
 let baseModelScale = 1;
+let activeAction = null;
 const clock = new THREE.Clock();
 
 const STATE = { IDLE: 'idle', MOVING: 'moving', DRAGGING: 'dragging', REACTING: 'reacting' };
@@ -191,8 +192,12 @@ function playClip(index, loop) {
   action.reset();
   action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
   action.clampWhenFinished = !loop;
+  if (activeAction && activeAction !== action) {
+    activeAction.fadeOut(0.2);
+  }
   action.fadeIn(0.2);
   action.play();
+  activeAction = action;
   return action;
 }
 
