@@ -2,7 +2,7 @@
 
 VRChat改変アバターをiPhoneのホーム画面アイコンから全画面起動できるPWA。`ar-avatar-demo`の資産（`model.glb`）を流用し、three.js（ローカルvendor）で自律徘徊マスコットとして描画する。
 
-**ステータス:** iPhone実機での動作確認済み（GitHub Pages上でライブ運用）
+**ステータス:** GitHub Pages上でライブ運用中。旧model-viewer版はiPhone実機で動作確認済みだが、three.js化した自律徘徊・タップ・ドラッグの新実装は実機未確認（Previewツールでの検証のみ）
 
 ---
 
@@ -217,5 +217,5 @@ three.js化に伴い、タップ反応は「カメラのFOVを操作する」旧
 
 ---
 
-**更新日:** 2026-07-08  
+**更新日:** 2026-07-09  
 **作成者:** hasegawakasyouen
