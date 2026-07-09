@@ -19,17 +19,21 @@ manifest.json (PWA設定)
     ↓
 iPhone Safari「ホーム画面に追加」
     ↓
-ホーム画面のアイコンから起動 → 全画面表示 → タップでバウンド反応 + AR Quick Look対応
+ホーム画面のアイコンから起動 → 全画面表示 → タップでバウンド反応 + 自由に画面内を徘徊
 ```
 
 ### ファイル構成
 
 ```
 vrc-mascot-pwa/
-├── index.html              # model-viewer + タップ反応スクリプト
+├── index.html              # canvas + import map
+├── mascot.js                # three.jsシーン・自律徘徊の状態機械・タップ/ドラッグ処理
+├── vendor/                  # three.js本体（ローカル同梱、オフラインキャッシュ用）
+│   ├── three.module.js
+│   ├── loaders/GLTFLoader.js
+│   └── utils/BufferGeometryUtils.js
 ├── manifest.json           # PWA設定（scope・display等）
-├── model.glb               # 通常3D表示用（全ブラウザ対応）
-├── model.usdz              # iOS AR Quick Look用
+├── model.glb               # 3Dモデル本体（idle/wave/danceの3アニメーションを内包）
 ├── icons/
 │   ├── icon-192.png        # ホーム画面アイコン（192x192）
 │   └── icon-512.png        # スプラッシュ画面等用（512x512）
@@ -52,7 +56,6 @@ vrc-mascot-pwa/
 
 ```bash
 cp "C:\Users\PC_User\Documents\ar-avatar-demo\model.glb" "C:\Users\PC_User\Documents\vrc-mascot-pwa\model.glb"
-cp "C:\Users\PC_User\Documents\ar-avatar-demo\model.usdz" "C:\Users\PC_User\Documents\vrc-mascot-pwa\model.usdz"
 ```
 
 ### Step 2: ローカルプレビューでアイコン用画像をキャプチャ
@@ -67,19 +70,10 @@ python -m http.server 8080
 **ブラウザデベロッパーツール（F12）のコンソールで以下を実行:**
 
 ```javascript
-// model-viewer を一時停止し、カメラを調整して正面顔の画像を取得
-mascot.pause();
-mascot.cameraOrbit = "0deg 0deg auto";
-mascot.fieldOfView = "25deg";
-mascot.currentTime = 0;
-
-// 少し待ってレンダリング完了後、キャプチャ取得
-// 注意: model-viewer の実際のWebGL canvasはシャドウDOM内にあるため、
-// document.getElementById('mascot').querySelector('canvas') では取得できない
-// (querySelectorはシャドウDOM境界を貫通しないため null が返り、エラーになる)。
-// model-viewer 要素自身が公開している toDataURL() を直接呼び出すこと。
+// three.js化により <canvas id="stage"> がそのままWebGLキャンバスなので、
+// シャドウDOM越しのアクセスは不要。直接 toDataURL() を呼べる。
 setTimeout(() => {
-  const dataUrl = mascot.toDataURL('image/png');
+  const dataUrl = document.getElementById('stage').toDataURL('image/png');
   console.log(dataUrl);
 }, 500);
 ```
@@ -145,7 +139,7 @@ python generate_icons.py
 
 ```bash
 cd "C:\Users\PC_User\Documents\vrc-mascot-pwa"
-git add model.glb model.usdz icons/icon-512.png icons/icon-192.png
+git add model.glb icons/icon-512.png icons/icon-192.png
 git commit -m "update: replace avatar with new version"
 git push
 ```
@@ -172,18 +166,18 @@ git push
 iPhoneのSafariで上記URLを開き、以下を確認：
 
 1. 3Dモデルが表示される
-2. タップするとスケール変化（バウンド反応）が起こる
-3. 「ARで見る」ボタンをタップ → AR Quick Lookが起動 → 床に配置してアニメーション確認
+2. タップするとバウンス演出が起こる
+3. 指でつまむとドラッグでき、離すとまた自律的に動き出す
 4. Safari右下のシェアボタン → 「ホーム画面に追加」
-5. ホーム画面のアイコンをタップして起動 → 全画面表示 → タップ反応・AR機能が使える
+5. ホーム画面のアイコンをタップして起動 → 全画面表示 → 自律徘徊・タップ反応・ドラッグが使える
 
 ---
 
 ## 既知の制限・注意点
 
-- **iOS Safari（PWA / AR Quick Look）専用** — Android非対応
-- **真のシステム壁紙ではない** — Appleの制約上、サードパーティアプリによるライブ壁紙は不可能。あくまで「ホーム画面のアイコンから開くと全画面表示されるWebアプリ」です
-- **アニメーションはタップで順送り切り替え** — `model.glb`に複数のアニメーションクリップが入っている場合、タップのたびに次のクリップへ自動で切り替わります（`mascot.availableAnimations`のインデックス順）。選択メニュー等のUIはありません
+- **iOS Safari（PWA）専用** — Android非対応（未検証）
+- **アプリを開いている間だけ動く** — OSのホーム画面や他アプリの上に常駐して動き回ることはできません（iOSのサードパーティアプリには許可されていない領域のため）。あくまで「このPWAを開いている画面の中で」アバターが自律的に動き回ります
+- **タップは毎回ランダムなリアクション** — タップするたびに、待機アニメーション以外のクリップからランダムに1つ再生し、終わるとまた自律徘徊に戻ります。選択メニュー等のUIはありません
 - **初回起動のみネットワーク接続が必要** — `sw.js` によるService Workerキャッシュを導入済み。2回目以降はオフラインでも起動できます（Step 5参照）
 - **キャッシュ更新には最短でも2回の起動が必要** — Service Workerの仕組み上、アバターを差し替えた直後の1回目の起動ではまだ古いキャッシュが使われることがあります
 
@@ -204,31 +198,9 @@ Step 2-3の画像キャプチャは以下の細部に注意してください：
 3. **クロップ・リサイズの順序**  
    一度合成してから **正方形にクロップ** → **512x512 と 192x192 にリサイズ**（`Image.LANCZOS` 推奨）という順序自体は検証済みです（逆順や複数回のリサイズは品質が落ちます）。ただし、**クロップ座標（left, top, right, bottom）に汎用的な正解はありません**。カメラ角度やポーズによって画角内のキャラクターの位置は変わるため、必ず一度 `canvas_img` を画像ファイルとして保存し、実際に開いて目視確認した上で、そのスクリーンショットに合わせた座標を都度決めてください。
 
-### AR ボタンのタップ反応二重トリガー対策
+### タップ反応中の状態管理
 
-デスクトップブラウザでテスト中、AR が利用できない環境ではAR ボタンが表示されないという仕様が判明しました。具体的には：
-
-- AR 対応デバイス（iPhone実機）では、`<model-viewer>` の `ar-button` slot にボタンが描画される
-- AR 非対応環境（デスクトップブラウザ等）では、`canActivateAR === false` のため slot 要素自体が 0×0 で折りたたまれる
-
-そのため、デスクトップでは「ARボタンがあるはずの位置」にクリックが着地しても、実は `<model-viewer>` キャンバス上をクリックしているため、正しくマスコットのバウンス反応が発火します。これは **不具合ではなく仕様通りの動作** です。
-
-ただし、**二重トリガー防止のため、以下の防御を実装しました**：
-
-1. `#ar-button` 要素に直接 `click` リスナーを付け、`event.stopPropagation()` で bubbling を止める
-   - AR ボタン自体がクリックされた場合、このリスナーが最優先で event を消費する
-
-2. マスコットの click ハンドラーで `event.target.closest('#ar-button')` をチェック（defense in depth）
-
-**テストのコツ：** AR ボタンが実際に機能しているかは **実AR対応デバイス（iPhone実機）でのみ確認** してください。デスクトップブラウザでは AR ボタンそのものが存在しないため、この実装の真価は測れません。
-
-### `reacting` フラグの確実なリセット
-
-タップ反応時のFOV操作（ズーム）で予期しないエラーが発生した場合、マスコットが永続的に反応不能になるのを防ぐため、以下を実装しました：
-
-- タップハンドラーの FOV 操作を `try/finally` で囲み、`finally` ブロック内で **必ず** `setTimeout` をスケジュール
-- この `setTimeout` 内で `reacting` フラグをリセット、CSS の `.tapped` クラスを削除
-- `getFieldOfView()` / `fieldOfView` setter がエラーを投げても、フラグリセットは発火するため、UI が固まらない
+three.js化に伴い、タップ反応は「カメラのFOVを操作する」旧実装から「`state`を`STATE.REACTING`にし、再生したクリップの`duration`分だけ`setTimeout`で待ってから`STATE.IDLE`に戻す」方式に変更した。クリップの長さに応じて反応時間が自動的に決まるため、アニメーションを差し替えても待ち時間を手動調整する必要がない。
 
 ### manifest.json の `scope` 指定
 

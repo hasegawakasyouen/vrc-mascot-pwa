@@ -1,29 +1,23 @@
-const CACHE_VERSION = 'mascot-cache-v6';
+const CACHE_VERSION = 'mascot-cache-v7';
 
 const CACHE_URLS = [
   './',
   './index.html',
+  './mascot.js',
   './manifest.json',
   './model.glb',
-  './model.usdz',
+  './vendor/three.module.js',
+  './vendor/loaders/GLTFLoader.js',
+  './vendor/utils/BufferGeometryUtils.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
 ];
-
-const CDN_URL = 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_VERSION);
       await cache.addAll(CACHE_URLS);
-      try {
-        await cache.add(CDN_URL);
-      } catch (err) {
-        // CDNが初回インストール時に到達不能でも、ローカルアセットのキャッシュは成立させる。
-        // CDN分は次回オンライン時の通常fetch経由でキャッシュされる。
-        console.warn('sw.js: CDN prefetch failed, will cache on next successful fetch:', err);
-      }
       self.skipWaiting();
     })()
   );
