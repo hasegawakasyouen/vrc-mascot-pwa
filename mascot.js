@@ -97,8 +97,18 @@ function updateWander(delta) {
       const step = Math.min(MOVE_SPEED * delta, dist);
       pos.x += (dx / dist) * step;
       pos.y += (dy / dist) * step;
+      updateFacing(dx, dy);
     }
   }
+}
+
+function updateFacing(dx, dy) {
+  // カメラが正面固定で奥行き方向の移動が無いため、画面内の移動ベクトル(dx, dy)を
+  // (x, z)相当とみなしてY軸回転角を求める簡略化を行っている。物理的な正確さより
+  // 「動いている方向になんとなく体を向ける」自然さを優先した実装。
+  if (Math.abs(dx) < 0.0001 && Math.abs(dy) < 0.0001) return;
+  if (!modelRoot) return;
+  modelRoot.rotation.y = Math.atan2(dx, dy);
 }
 
 function resize() {
