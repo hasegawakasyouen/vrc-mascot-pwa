@@ -32,6 +32,75 @@ let clips = [];
 let modelRoot = null;
 const clock = new THREE.Clock();
 
+const STATE = { IDLE: 'idle', MOVING: 'moving', DRAGGING: 'dragging', REACTING: 'reacting' };
+let state = STATE.IDLE;
+let stateTimer = 0;
+const target = new THREE.Vector3();
+const MOVE_SPEED = 1.2; // ワールド単位/秒
+
+function getWorldBounds() {
+  const style = getComputedStyle(document.documentElement);
+  const px = (name) => parseFloat(style.getPropertyValue(name)) || 0;
+  const insetTop = px('--sat');
+  const insetRight = px('--sar');
+  const insetBottom = px('--sab');
+  const insetLeft = px('--sal');
+
+  const worldPerPxX = (camera.right - camera.left) / window.innerWidth;
+  const worldPerPxY = (camera.top - camera.bottom) / window.innerHeight;
+
+  // キャラの見た目の半分程度を余白として確保し、画面端・セーフエリアに食い込まないようにする。
+  // 実機で見て狭すぎ/広すぎる場合はこの係数(0.35 / 0.5)をTask 8の確認時に調整する。
+  const halfCharWidth = TARGET_HEIGHT * 0.35;
+  const halfCharHeight = TARGET_HEIGHT * 0.5;
+
+  return {
+    minX: camera.left + insetLeft * worldPerPxX + halfCharWidth,
+    maxX: camera.right - insetRight * worldPerPxX - halfCharWidth,
+    minY: camera.bottom + insetBottom * worldPerPxY + halfCharHeight,
+    maxY: camera.top - insetTop * worldPerPxY - halfCharHeight,
+  };
+}
+
+function randomIdleDuration() {
+  return THREE.MathUtils.randFloat(2, 8); // 静止時間: 2〜8秒のランダム
+}
+
+function pickNewTarget() {
+  const b = getWorldBounds();
+  target.set(
+    THREE.MathUtils.randFloat(b.minX, b.maxX),
+    THREE.MathUtils.randFloat(b.minY, b.maxY),
+    0
+  );
+}
+
+function updateWander(delta) {
+  if (!modelRoot) return;
+  if (state === STATE.IDLE) {
+    stateTimer -= delta;
+    if (stateTimer <= 0) {
+      pickNewTarget();
+      state = STATE.MOVING;
+    }
+  } else if (state === STATE.MOVING) {
+    const pos = modelRoot.position;
+    const dx = target.x - pos.x;
+    const dy = target.y - pos.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.02) {
+      pos.x = target.x;
+      pos.y = target.y;
+      state = STATE.IDLE;
+      stateTimer = randomIdleDuration();
+    } else {
+      const step = Math.min(MOVE_SPEED * delta, dist);
+      pos.x += (dx / dist) * step;
+      pos.y += (dy / dist) * step;
+    }
+  }
+}
+
 function resize() {
   const width = window.innerWidth;
   const height = window.innerHeight;
@@ -44,6 +113,11 @@ function resize() {
   camera.top = halfH;
   camera.bottom = -halfH;
   camera.updateProjectionMatrix();
+  if (modelRoot) {
+    const b = getWorldBounds();
+    modelRoot.position.x = THREE.MathUtils.clamp(modelRoot.position.x, b.minX, b.maxX);
+    modelRoot.position.y = THREE.MathUtils.clamp(modelRoot.position.y, b.minY, b.maxY);
+  }
 }
 window.addEventListener('resize', resize);
 resize();
@@ -68,6 +142,7 @@ new GLTFLoader().load('model.glb', (gltf) => {
 
   mixer = new THREE.AnimationMixer(modelRoot);
   playClip(IDLE_CLIP_INDEX, true);
+  stateTimer = randomIdleDuration();
 
   requestAnimationFrame(animate);
 }, undefined, (error) => {
@@ -94,5 +169,8 @@ function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
   if (mixer) mixer.update(delta);
+  if (state === STATE.IDLE || state === STATE.MOVING) {
+    updateWander(delta);
+  }
   renderer.render(scene, camera);
 }
