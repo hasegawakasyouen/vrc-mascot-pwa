@@ -9,95 +9,37 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="マスコット">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three.module.js"
+    }
+  }
+  </script>
   <style>
-    html, body { margin: 0; height: 100%; background-color: #eee; }
-    model-viewer {
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+    }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background-color: #eee;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #stage {
+      display: block;
       width: 100vw;
       height: 100vh;
-      background-color: #eee;
-      transition: transform 0.15s ease;
-    }
-    model-viewer.tapped {
-      transform: scale(1.05);
-    }
-    #ar-button {
-      background-color: #fff;
-      border-radius: 8px;
-      border: none;
-      padding: 12px 20px;
-      position: absolute;
-      bottom: max(24px, env(safe-area-inset-bottom, 0px) + 12px);
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <model-viewer
-    id="mascot"
-    src="model.glb"
-    ios-src="model.usdz"
-    alt="改変アバター"
-    ar
-    ar-modes="quick-look"
-    camera-controls
-    autoplay
-    shadow-intensity="1">
-    <button id="ar-button" slot="ar-button">ARで見る</button>
-  </model-viewer>
-
-  <script>
-    const mascot = document.getElementById('mascot');
-    const arButton = document.getElementById('ar-button');
-    let reacting = false;
-
-    // model-viewerはシャドウDOM境界をまたぐと click イベントの target を
-    // ホスト要素(model-viewer自身)にリターゲットすることがあり、その場合
-    // event.target.closest('#ar-button') では検出できない。
-    // ARボタン自身にも直接リスナーを付け、バブリングをこの時点で止めることで、
-    // マスコット側のタップリアクションが誤発火しないようにする。
-    arButton.addEventListener('click', (event) => {
-      event.stopPropagation();
-    });
-
-    mascot.addEventListener('click', (event) => {
-      if (event.target.closest('#ar-button')) return;
-      if (reacting) return;
-      reacting = true;
-
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
-      }
-
-      let baseFov = null;
-      try {
-        mascot.classList.add('tapped');
-        if (mascot.loaded) {
-          baseFov = mascot.getFieldOfView();
-          mascot.fieldOfView = `${baseFov * 0.92}deg`;
-        }
-        const anims = mascot.availableAnimations;
-        if (anims && anims.length > 1) {
-          const current = anims.indexOf(mascot.animationName);
-          const next = (current + 1) % anims.length;
-          mascot.animationName = anims[next];
-          mascot.currentTime = 0;
-          mascot.play();
-        }
-      } finally {
-        setTimeout(() => {
-          mascot.classList.remove('tapped');
-          if (baseFov !== null) {
-            mascot.fieldOfView = `${baseFov}deg`;
-          }
-          reacting = false;
-        }, 300);
-      }
-    });
-  </script>
-
+  <canvas id="stage"></canvas>
+  <script type="module" src="mascot.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
