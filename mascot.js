@@ -42,6 +42,7 @@ const MOVE_SPEED = 1.2; // ワールド単位/秒
 let pointerDownPos = null;
 let pointerDownTime = 0;
 let isDragging = false;
+let activePointerId = null;
 const TAP_MOVE_THRESHOLD = 8; // px: これ以下の移動ならタップ扱い
 const TAP_TIME_THRESHOLD = 300; // ms: これ以下の押下時間ならタップ扱い
 const DRAG_START_THRESHOLD = 12; // px: これを超えたらドラッグ開始とみなす
@@ -214,6 +215,7 @@ function handleTap() {
   const clip = clips[nextIndex];
   const durationMs = (clip ? clip.duration : 1) * 1000;
   setTimeout(() => {
+    if (state !== STATE.REACTING) return;
     playClip(IDLE_CLIP_INDEX, true);
     state = STATE.IDLE;
     stateTimer = randomIdleDuration();
@@ -230,6 +232,8 @@ function bounce() {
 }
 
 canvas.addEventListener('pointerdown', (e) => {
+  if (activePointerId !== null) return;
+  activePointerId = e.pointerId;
   pointerDownPos = { x: e.clientX, y: e.clientY };
   pointerDownTime = performance.now();
   isDragging = false;
@@ -237,6 +241,7 @@ canvas.addEventListener('pointerdown', (e) => {
 
 canvas.addEventListener('pointermove', (e) => {
   if (!pointerDownPos || !modelRoot) return;
+  if (e.pointerId !== activePointerId) return;
   const dx = e.clientX - pointerDownPos.x;
   const dy = e.clientY - pointerDownPos.y;
   const dist = Math.hypot(dx, dy);
@@ -249,13 +254,15 @@ canvas.addEventListener('pointermove', (e) => {
 
   if (isDragging) {
     const worldPos = screenToWorld(e.clientX, e.clientY);
-    modelRoot.position.x = worldPos.x;
-    modelRoot.position.y = worldPos.y;
+    const b = getWorldBounds();
+    modelRoot.position.x = THREE.MathUtils.clamp(worldPos.x, b.minX, b.maxX);
+    modelRoot.position.y = THREE.MathUtils.clamp(worldPos.y, b.minY, b.maxY);
   }
 });
 
 canvas.addEventListener('pointerup', (e) => {
   if (!pointerDownPos) return;
+  if (e.pointerId !== activePointerId) return;
   const dx = e.clientX - pointerDownPos.x;
   const dy = e.clientY - pointerDownPos.y;
   const dist = Math.hypot(dx, dy);
@@ -269,4 +276,16 @@ canvas.addEventListener('pointerup', (e) => {
     handleTap();
   }
   pointerDownPos = null;
+  activePointerId = null;
+});
+
+canvas.addEventListener('pointercancel', (e) => {
+  if (e.pointerId !== activePointerId) return;
+  if (isDragging) {
+    isDragging = false;
+    state = STATE.IDLE;
+    stateTimer = randomIdleDuration();
+  }
+  pointerDownPos = null;
+  activePointerId = null;
 });
